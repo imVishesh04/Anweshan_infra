@@ -103,12 +103,23 @@ async def seed_data(db, settings, hash_password_func) -> None:
         )
         logger.info("Seeded initial site settings")
 
-    if await db.services.count_documents({}) == 0:
+    # Demo services / ideas are added only ONCE, on a brand-new database.
+    # Without this flag, deleting all demo content would bring it back on the
+    # next restart.
+    site = await db.settings.find_one({"id": "site"}) or {}
+    if site.get("demo_content_seeded"):
+        return
+
+    has_content = (
+        await db.services.count_documents({}) > 0 or await db.ideas.count_documents({}) > 0
+    )
+    if not has_content:
         for s in SEED_SERVICES:
             await db.services.insert_one(Service(**s).to_mongo())
-        logger.info("Seeded %d services", len(SEED_SERVICES))
-
-    if await db.ideas.count_documents({}) == 0:
         for i in SEED_IDEAS:
             await db.ideas.insert_one(DesignIdea(**i).to_mongo())
-        logger.info("Seeded %d design ideas", len(SEED_IDEAS))
+        logger.info("Seeded %d services and %d design ideas", len(SEED_SERVICES), len(SEED_IDEAS))
+
+    await db.settings.update_one(
+        {"id": "site"}, {"$set": {"demo_content_seeded": True}}, upsert=True
+    )

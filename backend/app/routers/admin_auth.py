@@ -12,14 +12,16 @@ from app.ratelimit import (
     register_failed_login,
 )
 from app.security import (
+    admin_token_payload,
     clear_auth_cookies,
     create_access_token,
     create_refresh_token,
-    hash_password,
+    get_client_ip,
+    hash_password_async,
     require_admin,
     set_auth_cookies,
     verify_csrf,
-    verify_password,
+    verify_password_async,
 )
 
 logger = logging.getLogger("anweshan.admin_auth")
@@ -35,7 +37,7 @@ async def admin_login(
     db=Depends(db_dependency),
     settings: Settings = Depends(get_settings),
 ):
-    ip = request.client.host if request.client else "unknown"
+    ip = get_client_ip(request, settings)
     verify_csrf(request, settings)
     await check_login_lockout(db, ip)
 
@@ -44,7 +46,7 @@ async def admin_login(
         raise HTTPException(status_code=400, detail="Password cannot exceed 72 characters.")
 
     admin = await db.users.find_one({"role": "admin"})
-    if not admin or not verify_password(body.password, admin.get("password_hash", "")):
+    if not admin or not await verify_password_async(body.password, admin.get("password_hash", "")):
         await register_failed_login(db, ip)
         raise HTTPException(status_code=401, detail="Wrong password. Please try again.")
 
@@ -113,7 +115,18 @@ async def admin_logout(
     settings: Settings = Depends(get_settings),
 ):
     verify_csrf(request, settings)
-    await db.users.update_one({"role": "admin"}, {"$inc": {"token_version": 1}})
+    # Only a real admin session may end all sessions. Without this check anyone
+    # could call /logout and keep kicking the owner out of the admin panel.
+    payload = admin_token_payload(request.cookies.get("access_token"), settings, "access") or admin_token_payload(
+        request.cookies.get("refresh_token"), settings, "refresh"
+    )
+    if payload is not None:
+        admin = await db.users.find_one({"role": "admin"})
+        if admin and payload.get("ver") == admin.get("token_version", 1):
+            await db.users.update_one(
+                {"role": "admin", "token_version": admin.get("token_version", 1)},
+                {"$inc": {"token_version": 1}},
+            )
     clear_auth_cookies(
         response,
         secure=settings.COOKIE_SECURE,
@@ -148,14 +161,14 @@ async def admin_change_password(
     if len(pw_bytes) > 72:
         raise HTTPException(status_code=400, detail="Password cannot exceed 72 characters.")
 
-    if not verify_password(body.current_password, admin.get("password_hash", "")):
+    if not await verify_password_async(body.current_password, admin.get("password_hash", "")):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
-    new_hash = hash_password(body.new_password)
+    new_hash = await hash_password_async(body.new_password)
     new_version = admin.get("token_version", 1) + 1
 
     await db.users.update_one(
-        {"id": admin["id"]},
+        {"_id": admin["_id"]},
         {"$set": {"password_hash": new_hash, "token_version": new_version}},
     )
 

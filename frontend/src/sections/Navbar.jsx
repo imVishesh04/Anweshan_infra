@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Menu, Phone, X } from "lucide-react";
 import Logo, { WhatsAppIcon } from "../components/Logo";
 import { useSite } from "@/lib/SiteContext";
-import { digits, scrollToId, waLink } from "@/lib/api";
+import { scrollToId, telHref, waLink } from "@/lib/api";
 
 const LINKS = [
   { id: "services", label: "Services" },
@@ -34,7 +34,7 @@ export default function Navbar() {
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-colors duration-500 ${
         scrolled
-          ? "bg-cream/85 backdrop-blur-xl border-b border-[#E6DEC8]/70 shadow-sm"
+          ? "bg-cream/95 border-b border-[#E6DEC8]/70 shadow-sm"
           : "bg-transparent"
       } ${open ? "bg-cream border-b border-[#E6DEC8]" : ""}`}
     >
@@ -58,7 +58,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2.5">
           <a
-            href={site.phone ? `tel:${digits(site.phone)}` : "#contact"}
+            href={site.phone ? telHref(site.phone) : "#contact"}
             onClick={(e) => { if (!site.phone) { e.preventDefault(); go("contact"); } }}
             className={`hidden sm:inline-flex items-center justify-center w-11 h-11 rounded-full border transition-colors ${
               scrolled || open ? "border-espresso/25 text-espresso hover:bg-espresso hover:text-cream" : "border-cream/35 text-cream hover:bg-cream hover:text-espresso"
@@ -106,7 +106,7 @@ export default function Navbar() {
           </div>
           <div className="grid grid-cols-2 gap-2.5 mt-5">
             <a
-              href={site.phone ? `tel:${digits(site.phone)}` : "#contact"}
+              href={site.phone ? telHref(site.phone) : "#contact"}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-espresso text-cream h-12 font-semibold"
               data-testid="nav-mobile-call-button"
             >

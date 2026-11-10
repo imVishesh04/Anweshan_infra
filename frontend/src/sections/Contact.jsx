@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Clock, Instagram, MapPin, Phone, User } from "lucide-react";
 import { toast } from "sonner";
-import { api, digits, formatApiError, waLink } from "@/lib/api";
+import { api, formatApiError, instagramUrl, telHref, waLink } from "@/lib/api";
 import { useSite } from "@/lib/SiteContext";
 import Logo, { WhatsAppIcon } from "../components/Logo";
 import Reveal, { Eyebrow } from "../components/Reveal";
@@ -17,15 +17,24 @@ export default function Contact() {
   const submit = async (e) => {
     e.preventDefault();
     setError("");
-    if (form.name.trim().length < 2) return setError("Please enter your name.");
-    if (form.phone.replace(/\D/g, "").length < 10) return setError("Please enter a valid 10-digit phone number.");
+    // Same rules as the server, so customers see the problem right under the form.
+    const name = form.name.trim();
+    const phone = form.phone.trim();
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (name.length < 2) return setError("Please enter your name.");
+    if (name.length > 80) return setError("Name is too long (max 80 letters).");
+    if (!/^[0-9+\-(). ]+$/.test(phone) || phoneDigits.length < 10 || phoneDigits.length > 13) {
+      return setError("Please enter a valid 10-digit phone number.");
+    }
     setSending(true);
     try {
-      await api.post("/enquiries", form);
+      await api.post("/enquiries", { ...form, name, phone });
       toast.success("Thank you! We will call you soon.");
       setForm({ name: "", phone: "", service: "", message: "" });
     } catch (err) {
-      toast.error(formatApiError(err, "Could not send. Please WhatsApp us instead."));
+      const msg = formatApiError(err, "Could not send. Please WhatsApp us instead.");
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSending(false);
     }
@@ -43,7 +52,7 @@ export default function Contact() {
     },
     site.phone && {
       key: "call",
-      href: `tel:${digits(site.phone)}`,
+      href: telHref(site.phone),
       icon: <Phone className="w-7 h-7" />,
       title: "Phone Call",
       sub: site.phone,
@@ -52,7 +61,7 @@ export default function Contact() {
     },
     site.instagram && {
       key: "instagram",
-      href: site.instagram,
+      href: instagramUrl(site.instagram),
       icon: <Instagram className="w-7 h-7" />,
       title: "Instagram",
       sub: "See our latest work",
@@ -132,6 +141,9 @@ export default function Contact() {
                   id="cf-name"
                   value={form.name}
                   onChange={set("name")}
+                  name="name"
+                  autoComplete="name"
+                  maxLength={80}
                   placeholder="e.g. Priya Sharma"
                   className="mt-2 w-full h-12 rounded-xl border border-[#E6DEC8] bg-white px-4 text-base outline-none focus:border-brass focus:ring-2 focus:ring-brass/30 transition"
                   data-testid="contact-form-name-input"
@@ -148,6 +160,9 @@ export default function Contact() {
                   inputMode="tel"
                   value={form.phone}
                   onChange={set("phone")}
+                  name="phone"
+                  autoComplete="tel"
+                  maxLength={20}
                   placeholder="e.g. 98765 43210"
                   className="mt-2 w-full h-12 rounded-xl border border-[#E6DEC8] bg-white px-4 text-base outline-none focus:border-brass focus:ring-2 focus:ring-brass/30 transition"
                   data-testid="contact-form-phone-input"
@@ -184,6 +199,7 @@ export default function Contact() {
                   id="cf-message"
                   value={form.message}
                   onChange={set("message")}
+                  maxLength={1000}
                   rows={3}
                   placeholder="Tell us about your space…"
                   className="mt-2 w-full rounded-xl border border-[#E6DEC8] bg-white px-4 py-3 text-base outline-none focus:border-brass focus:ring-2 focus:ring-brass/30 transition resize-none"
@@ -192,7 +208,7 @@ export default function Contact() {
               </div>
 
               {error && (
-                <p className="text-sm font-semibold text-terracotta" data-testid="contact-form-error">{error}</p>
+                <p role="alert" className="text-sm font-semibold text-terracotta" data-testid="contact-form-error">{error}</p>
               )}
 
               <button

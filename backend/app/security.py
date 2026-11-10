@@ -3,6 +3,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import anyio
 import bcrypt
 import jwt
 from fastapi import Depends, HTTPException, Request, Response
@@ -28,6 +29,50 @@ def verify_password(plain: str, hashed: str) -> bool:
         return bcrypt.checkpw(pw_bytes, hashed.encode("utf-8"))
     except (ValueError, TypeError):
         return False
+
+
+async def hash_password_async(password: str) -> str:
+    # bcrypt takes ~0.3 s; run it off the event loop so other visitors are not blocked.
+    return await anyio.to_thread.run_sync(hash_password, password)
+
+
+async def verify_password_async(plain: str, hashed: str) -> bool:
+    return await anyio.to_thread.run_sync(verify_password, plain, hashed)
+
+
+def get_client_ip(request: Request, settings: Settings) -> str:
+    """The real visitor IP, for login lockout and the enquiry limit.
+
+    Requests reach Railway through Netlify's proxy. Netlify signs proxied requests
+    (x-nf-sign, HS256 with NETLIFY_PROXY_SECRET); only for a correctly signed request
+    do we trust the visitor IP that Netlify passes on. Anything else (for example a
+    direct call to the Railway URL) is keyed on the connecting address, which a
+    caller cannot fake with an X-Forwarded-For header.
+    """
+    secret = settings.NETLIFY_PROXY_SECRET
+    signature = request.headers.get("x-nf-sign")
+    if secret and signature:
+        try:
+            jwt.decode(signature, secret, algorithms=["HS256"], options={"verify_aud": False})
+            ip = request.headers.get("x-nf-client-connection-ip", "").strip()
+            if not ip:
+                ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+            if ip:
+                return ip
+        except jwt.InvalidTokenError:
+            logger.warning("Ignoring request with an invalid Netlify proxy signature")
+    return request.client.host if request.client else "unknown"
+
+
+def admin_token_payload(token: str | None, settings: Settings, expected_type: str) -> dict | None:
+    """Decode an admin JWT of the given type, or return None if it is missing or invalid."""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+    except jwt.InvalidTokenError:
+        return None
+    return payload if payload.get("type") == expected_type else None
 
 
 def create_access_token(email: str, token_version: int, secret: str) -> str:

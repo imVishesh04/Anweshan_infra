@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Armchair, Home, MessageCircle, Store, Timer } from "lucide-react";
 import { useSite } from "@/lib/SiteContext";
-import { waLink } from "@/lib/api";
+import { imgUrl, waLink } from "@/lib/api";
 import Reveal, { EASE, Eyebrow } from "../components/Reveal";
 
 const ICONS = { home: Home, shop: Store, armchair: Armchair };
@@ -10,7 +9,7 @@ const ICONS = { home: Home, shop: Store, armchair: Armchair };
 const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 export default function Services() {
-  const { site, services, ready } = useSite();
+  const { site, services, ready, servicesFailed, reload } = useSite();
 
   return (
     <section id="services" className="py-20 sm:py-24 lg:py-28 bg-cream" data-testid="services-section">
@@ -19,7 +18,7 @@ export default function Services() {
           <Reveal>
             <Eyebrow>What we do</Eyebrow>
             <h2 className="mt-4 font-serif text-4xl sm:text-5xl tracking-tight text-espresso leading-[1.08]">
-              Three ways we make
+              How we make
               <br className="hidden sm:block" /> your space beautiful.
             </h2>
           </Reveal>
@@ -45,7 +44,14 @@ export default function Services() {
 
           {ready && services.length === 0 && (
             <div className="md:col-span-2 lg:col-span-3 rounded-[28px] border border-dashed border-[#E6DEC8] p-12 text-center text-espresso-muted">
-              Services are being prepared. Please WhatsApp us — we reply fast.
+              {servicesFailed ? "Could not load our services right now." : "Services are being prepared."} Please WhatsApp us — we reply fast.
+              {servicesFailed && (
+                <div className="mt-4">
+                  <button type="button" onClick={() => reload()} className="inline-flex items-center rounded-full border border-[#E6DEC8] px-6 h-11 text-sm font-bold text-espresso hover:border-brass">
+                    Tap to try again
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -65,7 +71,8 @@ export default function Services() {
                 <div className="relative h-56 sm:h-60 overflow-hidden">
                   {service.image ? (
                     <img
-                      src={service.image}
+                      src={imgUrl(service.image, 800)}
+                      decoding="async"
                       alt={service.title}
                       loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -73,7 +80,7 @@ export default function Services() {
                   ) : (
                     <div className="w-full h-full bg-cream-alt" />
                   )}
-                  <span className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-cream/90 backdrop-blur px-3.5 py-2 text-xs font-bold text-espresso shadow-sm">
+                  <span className="absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-cream/95 px-3.5 py-2 text-xs font-bold text-espresso shadow-sm">
                     <Icon className="w-4 h-4 text-brass-dark" />
                     {service.title}
                   </span>
@@ -88,6 +95,11 @@ export default function Services() {
                   )}
                   <h3 className="mt-3 font-serif text-2xl text-espresso">{service.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-espresso-muted flex-1">{service.description}</p>
+                  {service.price && (
+                    <p className="mt-4 text-lg font-bold text-espresso" data-testid={`service-price-${slug(service.title)}`}>
+                      {service.price}
+                    </p>
+                  )}
                   <a
                     href={site.whatsapp ? waLink(site.whatsapp, enquireText) : "#contact"}
                     onClick={(e) => {

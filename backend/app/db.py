@@ -47,8 +47,10 @@ async def ensure_indexes(db) -> None:
 
 async def init_db(mongo_url: str, db_name: str):
     global _client, _db
-    _client = AsyncMongoClient(mongo_url)
+    _client = AsyncMongoClient(mongo_url, serverSelectionTimeoutMS=8000)
     _db = _client[db_name]
+    # One quick ping so a wrong MONGO_URL or blocked IP fails in seconds, not minutes.
+    await _db.command("ping")
     await ensure_indexes(_db)
     return _db
 

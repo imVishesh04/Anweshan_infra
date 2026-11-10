@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Armchair, Home, LayoutGrid, Store } from "lucide-react";
-import { api, fileUrl, waLink } from "@/lib/api";
+import { api, imgUrl, waLink } from "@/lib/api";
 import { useSite } from "@/lib/SiteContext";
 import { WhatsAppIcon } from "../components/Logo";
 import Reveal, { EASE, Eyebrow } from "../components/Reveal";
@@ -20,16 +20,26 @@ export default function Gallery() {
   const [filter, setFilter] = useState("all");
   const [ideas, setIdeas] = useState([]);
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setReady(false);
+    setFailed(false);
     api
       .get("/ideas")
-      .then((r) => setIdeas(r.data))
-      .catch(() => {})
+      .then((r) => setIdeas(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setFailed(true))
       .finally(() => setReady(true));
   }, []);
 
-  const shown = filter === "all" ? ideas : ideas.filter((i) => i.category === filter);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const PAGE = 12;
+  const matching = filter === "all" ? ideas : ideas.filter((i) => i.category === filter);
+  const shown = showAll ? matching : matching.slice(0, PAGE);
 
   return (
     <section id="ideas" className="relative py-20 sm:py-24 lg:py-28 bg-espresso text-cream grain" data-testid="gallery-section">
@@ -38,7 +48,7 @@ export default function Gallery() {
           <Reveal>
             <Eyebrow light>Design ideas</Eyebrow>
             <h2 className="mt-4 font-serif text-4xl sm:text-5xl tracking-tight leading-[1.08]">
-              See what we create —<br className="hidden sm:block" /> tap one you love.
+              Designs you can have —<br className="hidden sm:block" /> tap one you love.
             </h2>
           </Reveal>
           <Reveal delay={0.1} className="max-w-sm">
@@ -52,7 +62,11 @@ export default function Gallery() {
           {FILTERS.map(({ v, label, icon: Icon }) => (
             <button
               key={v}
-              onClick={() => setFilter(v)}
+              aria-pressed={filter === v}
+              onClick={() => {
+                setFilter(v);
+                setShowAll(false);
+              }}
               className={`inline-flex items-center gap-2 rounded-full px-5 h-11 text-sm font-bold transition-all ${
                 filter === v
                   ? "bg-brass text-espresso shadow-brass"
@@ -66,27 +80,39 @@ export default function Gallery() {
           ))}
         </Reveal>
 
-        <motion.div layout className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
-          <AnimatePresence mode="popLayout">
+        {!ready && (
+          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6" aria-hidden="true">
+            {[0, 1, 2].map((n) => (
+              <div key={n} className="aspect-[4/5] rounded-[24px] bg-cream/5 animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
+          <AnimatePresence initial={false}>
             {shown.map((idea, idx) => (
               <motion.article
                 key={idea.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.45, ease: EASE, delay: idx * 0.04 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3, ease: EASE }}
                 className="group relative aspect-[4/5] rounded-[24px] overflow-hidden border border-cream/10"
                 data-testid="design-idea-card"
               >
+                {idea.image ? (
                 <img
-                  src={fileUrl(idea.image)}
+                  src={imgUrl(idea.image, 900)}
+                  decoding="async"
                   alt={idea.title}
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
+                ) : (
+                  <div className="absolute inset-0 bg-espresso-soft" />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-espresso via-espresso/15 to-transparent" />
-                <span className="absolute top-4 left-4 rounded-full bg-cream/15 backdrop-blur border border-cream/25 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cream/90">
+                <span className="absolute top-4 left-4 rounded-full bg-espresso/45 border border-cream/25 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cream/90">
                   {CAT_LABEL[idea.category] || idea.category}
                 </span>
                 <div className="absolute inset-x-0 bottom-0 p-5 flex items-end justify-between gap-3">
@@ -103,7 +129,6 @@ export default function Gallery() {
                     )}
                     target="_blank"
                     rel="noreferrer"
-                    onClick={(e) => { if (!site.whatsapp) e.preventDefault(); }}
                     className="shrink-0 grid place-items-center w-11 h-11 rounded-full bg-wa hover:bg-wa-dark text-white shadow-brass transition-colors"
                     aria-label={`Ask about ${idea.title}`}
                     data-testid={`idea-ask-${idx}`}
@@ -114,9 +139,32 @@ export default function Gallery() {
               </motion.article>
             ))}
           </AnimatePresence>
-        </motion.div>
+        </div>
 
-        {ready && shown.length === 0 && (
+        {ready && !showAll && matching.length > PAGE && (
+          <div className="mt-8 text-center">
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="inline-flex items-center rounded-full border border-cream/30 px-6 h-11 text-sm font-bold text-cream hover:border-brass hover:text-brass-light"
+            >
+              Show more designs ({matching.length - PAGE})
+            </button>
+          </div>
+        )}
+
+        {ready && failed && (
+          <div className="mt-10 rounded-[24px] border border-dashed border-cream/20 p-10 text-center text-cream/70">
+            Could not load designs. Please check your internet.
+            <div className="mt-4">
+              <button type="button" onClick={load} className="inline-flex items-center rounded-full bg-brass text-espresso px-6 h-11 text-sm font-bold">
+                Tap to try again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {ready && !failed && matching.length === 0 && (
           <div className="mt-10 rounded-[24px] border border-dashed border-cream/20 p-12 text-center text-cream/60">
             No ideas here yet — new designs are being added. Please check again soon!
           </div>

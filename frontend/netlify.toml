@@ -1,0 +1,54 @@
+# Netlify config for the ANWESHAN Infra frontend.
+# In Netlify set "Base directory" = frontend (this file must stay inside frontend/).
+# All routing lives HERE. public/_redirects must stay empty: Netlify reads it first,
+# and a rule there would bypass the signed proxy below.
+
+[build]
+  command = "yarn build"
+  publish = "build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # CRA treats warnings as errors when CI=true (Netlify sets CI=true by default).
+  CI = "false"
+  # Empty = call the API on the same domain; Netlify forwards /api to Railway below.
+  REACT_APP_BACKEND_URL = ""
+  # Don't publish source maps (they would expose the full source code).
+  GENERATE_SOURCEMAP = "false"
+
+# 1) Forward every /api request to the backend on Railway.
+#    The browser only ever talks to anweshaninfra.in, so admin login cookies work
+#    in every browser (including Safari / iPhone).
+#    `signed` makes Netlify add an x-nf-sign header made with the NETLIFY_PROXY_SECRET
+#    environment variable (set the same value in Netlify AND Railway). The backend
+#    then trusts the real visitor IP only on signed requests.
+[[redirects]]
+  from = "/api/*"
+  to = "https://anweshaninfra-production.up.railway.app/api/:splat"
+  status = 200
+  force = true
+  signed = "NETLIFY_PROXY_SECRET"
+
+# 2) Single-page app: /admin and any other path load index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/admin"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

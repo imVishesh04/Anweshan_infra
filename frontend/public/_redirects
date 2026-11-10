@@ -1,2 +1,2 @@
-   /api/*  https://anweshaninfra-production.up.railway.app/api/:splat  200!
-   /*  /index.html  200
+# Intentionally empty. All Netlify routing is in netlify.toml (signed /api proxy + SPA fallback).
+# A rule here would be processed first and bypass it.

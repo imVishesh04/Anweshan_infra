@@ -1,9 +1,11 @@
-import { Component, useEffect } from "react";
+import { Component, Suspense, lazy, useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import Home from "@/pages/Home";
-import Admin from "@/pages/Admin";
+
+// The admin panel is only for the owner; customers never download its code.
+const Admin = lazy(() => import("@/pages/Admin"));
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -43,7 +45,14 @@ export default function App() {
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route
+            path="/admin"
+            element={
+              <Suspense fallback={<div className="min-h-screen bg-espresso" />}>
+                <Admin />
+              </Suspense>
+            }
+          />
           <Route path="*" element={<Home />} />
         </Routes>
         <Toaster position="top-center" richColors closeButton />

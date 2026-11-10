@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str | None = None
     TWILIO_WHATSAPP_FROM: str | None = None
     OWNER_WHATSAPP: str | None = None
+    NOTIFY_EMAIL_FROM: str = "ANWESHAN Infra <onboarding@resend.dev>"
+
+    # Shared secret for Netlify's signed proxy (netlify.toml `signed = "NETLIFY_PROXY_SECRET"`).
+    # When set, the real visitor IP is taken from Netlify's signed headers.
+    NETLIFY_PROXY_SECRET: str | None = None
 
     @field_validator("JWT_SECRET")
     @classmethod

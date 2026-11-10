@@ -6,7 +6,12 @@ export function WhatsAppIcon({ className = "w-5 h-5" }) {
   );
 }
 
-export function ArchMark({ className = "w-9 h-9" }) {
+export function ArchMark({ className = "w-9 h-9", light = false }) {
+  // On dark backgrounds use the transparent white mark; the cream-backed logo
+  // with "multiply" blending almost disappears there.
+  if (light) {
+    return <img src="/logo-white.png" alt="" aria-hidden="true" className={`object-contain ${className}`} />;
+  }
   return (
     <img
       src="/logo.png"
@@ -21,7 +26,7 @@ export function ArchMark({ className = "w-9 h-9" }) {
 export default function Logo({ light = false, className = "" }) {
   return (
     <span className={`inline-flex items-center gap-3 ${className}`}>
-      <ArchMark className="w-11 h-11 -my-1" />
+      <ArchMark className="w-11 h-11 -my-1" light={light} />
       <span className="leading-none">
         <span className={`block font-serif font-semibold tracking-[0.06em] text-lg ${light ? "text-cream" : "text-espresso"}`}>
           ANWESHAN

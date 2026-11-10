@@ -30,11 +30,11 @@ async def test_enquiry_validation_errors(app_client):
     # Invalid phone (letters or too short)
     res = await app_client.post("/api/enquiries", json={"name": "Valid Name", "phone": "12345"})
     assert res.status_code == 400
-    assert "Please enter a valid phone number." in res.json()["detail"]
+    assert "Please enter a valid 10-digit phone number." in res.json()["detail"]
 
     res = await app_client.post("/api/enquiries", json={"name": "Valid Name", "phone": "not-a-number"})
     assert res.status_code == 400
-    assert "Please enter a valid phone number." in res.json()["detail"]
+    assert "Please enter a valid 10-digit phone number." in res.json()["detail"]
 
 
 @pytest.mark.anyio

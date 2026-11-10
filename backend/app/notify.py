@@ -65,9 +65,10 @@ async def send_lead_notifications(enquiry_dict: dict, settings: Settings) -> Non
                 if res.is_success:
                     logger.info("Telegram lead notification sent successfully.")
                 else:
-                    logger.warning("Telegram notification responded with status %s: %s", res.status_code, res.text)
+                    logger.warning("Telegram notification responded with status %s", res.status_code)
         except Exception as exc:
-            logger.error("Telegram notification failed: %s", exc)
+            # Never log the exception text: httpx errors include the URL, which holds the bot token.
+            logger.error("Telegram notification failed: %s", type(exc).__name__)
 
     # 2. Resend email alert
     if settings.RESEND_API_KEY and settings.NOTIFY_EMAIL_TO:
@@ -79,9 +80,9 @@ async def send_lead_notifications(enquiry_dict: dict, settings: Settings) -> Non
                 "Content-Type": "application/json",
             }
             payload = {
-                "from": "ANWESHAN Infra <onboarding@resend.dev>",
+                "from": settings.NOTIFY_EMAIL_FROM,
                 "to": [settings.NOTIFY_EMAIL_TO],
-                "subject": f"New Lead from {name} — ANWESHAN Infra",
+                "subject": f"New Lead from {' '.join(name.split())[:60]} — ANWESHAN Infra",
                 "text": body,
             }
             async with httpx.AsyncClient(timeout=10.0) as client:

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2, Phone, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { adminApi, digits, formatApiError, formatDate, waLink } from "@/lib/api";
+import { adminApi, formatApiError, formatDate, telHref, waLink } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { WhatsAppIcon } from "@/components/Logo";
 import {
@@ -12,12 +12,13 @@ import {
 export default function EnquiriesTab() {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState(null);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const r = await adminApi({ url: "/admin/enquiries" });
-      setEnquiries(r.data);
+      setEnquiries(Array.isArray(r.data) ? r.data : []);
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {
@@ -27,24 +28,38 @@ export default function EnquiriesTab() {
 
   useEffect(() => {
     load();
+    // New enquiries show up when the owner comes back to this tab or app.
+    const onFocus = () => load(true);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
+  const unread = enquiries.filter((e) => !e.read).length;
+
   const markRead = async (eq) => {
+    if (busyId) return;
+    setBusyId(eq.id);
     try {
       await adminApi({ url: `/admin/enquiries/${eq.id}/read`, method: "PUT" });
       setEnquiries((list) => list.map((e) => (e.id === eq.id ? { ...e, read: true } : e)));
     } catch (e) {
       toast.error(formatApiError(e));
+    } finally {
+      setBusyId(null);
     }
   };
 
   const remove = async (eq) => {
+    if (busyId) return;
+    setBusyId(eq.id);
     try {
       await adminApi({ url: `/admin/enquiries/${eq.id}`, method: "DELETE" });
       toast.success("Enquiry removed.");
-      load();
+      setEnquiries((list) => list.filter((e) => e.id !== eq.id));
     } catch (e) {
       toast.error(formatApiError(e));
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -54,7 +69,12 @@ export default function EnquiriesTab() {
 
   return (
     <div>
-      <h2 className="font-serif text-2xl">Customer Enquiries</h2>
+      <h2 className="font-serif text-2xl">
+        Customer Enquiries
+        {unread > 0 && (
+          <span className="ml-2 align-middle inline-flex items-center rounded-full bg-terracotta text-white text-xs font-bold px-2.5 py-1">{unread} new</span>
+        )}
+      </h2>
       <p className="text-sm text-espresso-muted mt-0.5">Everyone who filled the form on your website. Call or WhatsApp them back.</p>
 
       {enquiries.length === 0 ? (
@@ -83,9 +103,9 @@ export default function EnquiriesTab() {
                   <p className="mt-1.5 text-sm text-espresso-muted">{formatDate(eq.created_at)}</p>
                   {eq.message && <p className="mt-2 text-sm text-espresso leading-relaxed">"{eq.message}"</p>}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <a
-                    href={`tel:${digits(eq.phone)}`}
+                    href={telHref(eq.phone)}
                     className="inline-flex items-center gap-1.5 rounded-full border border-espresso/25 text-espresso px-4 h-10 text-sm font-bold hover:bg-espresso hover:text-cream transition-colors"
                     data-testid={`enquiry-call-${eq.id}`}
                   >

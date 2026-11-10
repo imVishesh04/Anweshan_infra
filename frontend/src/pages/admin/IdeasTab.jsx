@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi, fileUrl, formatApiError } from "@/lib/api";
+import { MAX_UPLOAD_MB, compressImage } from "@/lib/compressImage";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
@@ -31,12 +32,21 @@ export default function IdeasTab() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
   const [saving, setSaving] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const setPreviewUrl = (url) => {
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return url;
+    });
+  };
 
   const load = async () => {
     setLoading(true);
     try {
       const r = await adminApi({ url: "/admin/ideas" });
-      setIdeas(r.data);
+      setIdeas(Array.isArray(r.data) ? r.data : []);
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {
@@ -52,23 +62,37 @@ export default function IdeasTab() {
     setEditing(null);
     setForm(EMPTY);
     setFile(null);
-    setPreview("");
+    setPreviewUrl("");
     setOpen(true);
   };
 
   const openEdit = (idea) => {
     setEditing(idea);
-    setForm({ title: idea.title, category: idea.category, description: idea.description || "", image: idea.image || "" });
+    // Only web links are shown in the link box; an uploaded photo stays as it is
+    // unless a new photo or link is given (an empty box never removes it).
+    const isLink = (idea.image || "").startsWith("http");
+    setForm({ title: idea.title, category: idea.category, description: idea.description || "", image: isLink ? idea.image : "" });
     setFile(null);
-    setPreview("");
+    setPreviewUrl("");
     setOpen(true);
   };
 
-  const onFile = (e) => {
+  const onFile = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
+    setPreparing(true);
+    try {
+      const small = await compressImage(f);
+      if (small.size > MAX_UPLOAD_MB * 1024 * 1024) {
+        toast.error(`This photo is too big (${(small.size / 1048576).toFixed(1)} MB). Please choose a photo under ${MAX_UPLOAD_MB} MB.`);
+        e.target.value = "";
+        return;
+      }
+      setFile(small);
+      setPreviewUrl(URL.createObjectURL(small));
+    } finally {
+      setPreparing(false);
+    }
   };
 
   const save = async () => {
@@ -89,7 +113,8 @@ export default function IdeasTab() {
         const up = await adminApi({ url: "/admin/upload", method: "POST", data: fd });
         image = up.data.path;
       }
-      const payload = { title: form.title.trim(), category: form.category, description: form.description.trim(), image };
+      const payload = { title: form.title.trim(), category: form.category, description: form.description.trim() };
+      if (image) payload.image = image;
       if (editing) {
         await adminApi({ url: `/admin/ideas/${editing.id}`, method: "PUT", data: payload });
       } else {
@@ -97,6 +122,8 @@ export default function IdeasTab() {
       }
       toast.success(editing ? "Idea updated." : "Idea added — it is live on your website now!");
       setOpen(false);
+      setFile(null);
+      setPreviewUrl("");
       load();
     } catch (e) {
       toast.error(formatApiError(e));
@@ -106,12 +133,16 @@ export default function IdeasTab() {
   };
 
   const remove = async (idea) => {
+    if (deletingId) return;
+    setDeletingId(idea.id);
     try {
       await adminApi({ url: `/admin/ideas/${idea.id}`, method: "DELETE" });
       toast.success("Idea deleted.");
-      load();
+      setIdeas((list) => list.filter((i) => i.id !== idea.id));
     } catch (e) {
       toast.error(formatApiError(e));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -148,12 +179,12 @@ export default function IdeasTab() {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brass-dark">{CAT_LABEL[idea.category]}</span>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(idea)} aria-label="Edit idea" data-testid={`admin-edit-idea-${idea.id}`}>
+                    <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => openEdit(idea)} aria-label="Edit idea" data-testid={`admin-edit-idea-${idea.id}`}>
                       <Pencil className="w-4 h-4" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-terracotta hover:text-terracotta" aria-label="Delete idea" data-testid={`admin-delete-idea-${idea.id}`}>
+                        <Button variant="ghost" size="icon" disabled={deletingId === idea.id} className="h-11 w-11 text-terracotta hover:text-terracotta" aria-label="Delete idea" data-testid={`admin-delete-idea-${idea.id}`}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </AlertDialogTrigger>
@@ -197,6 +228,7 @@ export default function IdeasTab() {
                   <button
                     key={c.v}
                     type="button"
+                    aria-pressed={form.category === c.v}
                     onClick={() => setForm({ ...form, category: c.v })}
                     className={`h-10 rounded-full text-sm font-bold transition-colors ${form.category === c.v ? "bg-espresso text-cream" : "border border-[#E6DEC8] bg-white text-espresso hover:border-brass"}`}
                     data-testid={`admin-idea-category-${c.v}`}
@@ -211,13 +243,19 @@ export default function IdeasTab() {
               <Label htmlFor="idea-photo" className="flex items-center gap-2 text-sm font-bold">
                 <Upload className="w-4 h-4 text-brass-dark" /> Upload photo (from your phone/computer)
               </Label>
-              <Input id="idea-photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onFile} className="mt-1.5 h-11 rounded-xl border-[#E6DEC8] bg-white" data-testid="admin-idea-photo-input" />
+              <Input id="idea-photo" type="file" accept="image/*" onChange={onFile} className="mt-1.5 h-11 rounded-xl border-[#E6DEC8] bg-white" data-testid="admin-idea-photo-input" />
             </div>
 
-            {(preview || form.image) && (
+            {preparing && (
+              <p className="text-sm text-espresso-muted flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Preparing photo…</p>
+            )}
+            {(preview || form.image || editing?.image) && (
               <div className="h-36 rounded-xl overflow-hidden border border-[#E6DEC8] bg-white">
-                <img src={preview || fileUrl(form.image)} alt="preview" className="w-full h-full object-cover" />
+                <img src={preview || fileUrl(form.image || editing?.image)} alt="preview" className="w-full h-full object-cover" />
               </div>
+            )}
+            {editing?.image && !preview && !form.image && (
+              <p className="text-xs text-espresso-muted -mt-3">The current photo stays unless you upload a new one.</p>
             )}
 
             <div>
@@ -233,7 +271,7 @@ export default function IdeasTab() {
 
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setOpen(false)} className="rounded-full border-[#E6DEC8]" data-testid="admin-idea-cancel-button">Cancel</Button>
-            <Button onClick={save} disabled={saving} className="rounded-full bg-espresso hover:bg-espresso-soft text-cream px-6" data-testid="admin-idea-save-button">
+            <Button onClick={save} disabled={saving || preparing} className="rounded-full bg-espresso hover:bg-espresso-soft text-cream px-6" data-testid="admin-idea-save-button">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? "Save Changes" : "Add to Website"}
             </Button>
           </DialogFooter>

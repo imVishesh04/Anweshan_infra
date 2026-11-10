@@ -35,52 +35,59 @@ async def check_login_lockout(db, ip: str) -> None:
         )
 
 
+MAX_FAILED_LOGINS = 5
+LOCK_MINUTES = 15
+MAX_ENQUIRIES = 5
+ENQUIRY_WINDOW_MINUTES = 10
+
+
 async def register_failed_login(db, ip: str) -> None:
     now = datetime.now(UTC)
-    rec = await db.login_attempts.find_one({"identifier": ip})
-    current_count = (rec or {}).get("count", 0)
-    new_count = current_count + 1
-
-    update = {
-        "count": new_count,
-        "updated_at": now,
-        "expires_at": now + timedelta(minutes=15),
-    }
-    if new_count >= 5:
-        update["locked_until"] = now + timedelta(minutes=15)
-        update["count"] = 0
-
-    await db.login_attempts.update_one(
+    expires = now + timedelta(minutes=LOCK_MINUTES)
+    # Atomic increment, so parallel wrong guesses cannot overwrite each other's count.
+    rec = await db.login_attempts.find_one_and_update(
         {"identifier": ip},
         {
-            "$set": update,
+            "$inc": {"count": 1},
+            "$set": {"updated_at": now, "expires_at": expires},
             "$setOnInsert": {"created_at": now},
         },
         upsert=True,
+        return_document=ReturnDocument.AFTER,
     )
+    if rec and rec.get("count", 0) >= MAX_FAILED_LOGINS:
+        await db.login_attempts.update_one(
+            {"_id": rec["_id"]},
+            {"$set": {"locked_until": expires, "count": 0, "expires_at": expires}},
+        )
+        logger.warning("Admin login locked for %s minutes after repeated wrong passwords", LOCK_MINUTES)
 
 
 async def clear_login_attempts(db, ip: str) -> None:
-    await db.login_attempts.delete_one({"identifier": ip})
+    await db.login_attempts.delete_many({"identifier": ip})
 
 
 async def check_and_increment_enquiry_limit(db, ip: str) -> None:
     now = datetime.now(UTC)
-    window_expiry = now + timedelta(minutes=10)
+    # End an old window here too, so the limit never becomes permanent if the
+    # TTL index is missing or MongoDB's TTL cleanup runs late.
+    await db.enquiry_rate_limits.delete_many({"ip": ip, "expires_at": {"$lte": now}})
 
-    # Atomic find_one_and_update
     rec = await db.enquiry_rate_limits.find_one_and_update(
         {"ip": ip},
         {
             "$inc": {"count": 1},
-            "$setOnInsert": {"created_at": now, "expires_at": window_expiry},
+            "$setOnInsert": {
+                "created_at": now,
+                "expires_at": now + timedelta(minutes=ENQUIRY_WINDOW_MINUTES),
+            },
         },
         upsert=True,
         return_document=ReturnDocument.AFTER,
     )
 
-    if rec and rec.get("count", 0) > 5:
-        logger.warning("Enquiry rate limit exceeded for IP %s", ip)
+    if rec and rec.get("count", 0) > MAX_ENQUIRIES:
+        logger.warning("Enquiry rate limit exceeded")
         raise HTTPException(
             status_code=429,
             detail="Too many requests. Please WhatsApp us instead.",

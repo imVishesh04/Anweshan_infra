@@ -44,7 +44,7 @@ async def test_upload_fake_image_rejected(authenticated_admin):
 
     res = await authenticated_admin.post("/api/admin/upload", files=files, headers=headers)
     assert res.status_code == 400
-    assert "Only JPG, PNG or WEBP images are allowed." in res.json()["detail"]
+    assert "Only JPG, PNG or WEBP photos are allowed." in res.json()["detail"]
 
 
 @pytest.mark.anyio

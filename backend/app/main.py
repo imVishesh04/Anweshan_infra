@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import close_db, init_db
+from app.limits import BodySizeLimitMiddleware
 from app.routers import admin_auth_router, admin_content_router, public_router
 from app.security import hash_password
 from app.seed import seed_data
@@ -16,6 +17,10 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+# httpx logs every request URL at INFO level. The Telegram URL contains the bot
+# token, so these loggers must stay quiet.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 logger = logging.getLogger("anweshan.main")
 
 
@@ -79,6 +84,9 @@ def create_app() -> FastAPI:
 
     # Custom security headers middleware
     app.add_middleware(SecurityHeadersMiddleware)
+
+    # Reject oversized request bodies before anything reads them into memory
+    app.add_middleware(BodySizeLimitMiddleware)
 
     # Routers
     app.include_router(public_router)

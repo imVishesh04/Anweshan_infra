@@ -1,9 +1,13 @@
-import re
+import logging
 import uuid
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from app.phone import normalize_phone
+
+logger = logging.getLogger("anweshan.models")
 
 
 class BaseDocument(BaseModel):
@@ -19,7 +23,23 @@ class BaseDocument(BaseModel):
             return None
         d = dict(doc)
         d.pop("_id", None)  # Never expose MongoDB internal _id
+        # Imported or hand-edited records may hold real datetimes; the API uses ISO strings.
+        for key, value in d.items():
+            if isinstance(value, datetime):
+                d[key] = (value if value.tzinfo else value.replace(tzinfo=UTC)).isoformat()
         return cls(**d)
+
+    @classmethod
+    def list_from_mongo(cls, docs) -> list[dict]:
+        """Convert a list of documents, skipping (and logging) any broken record
+        instead of failing the whole page with a 500."""
+        out = []
+        for doc in docs:
+            try:
+                out.append(cls.from_mongo(doc).model_dump())
+            except (ValidationError, TypeError, ValueError) as exc:
+                logger.error("Skipping invalid %s record %s: %s", cls.__name__, doc.get("id"), exc)
+        return out
 
 
 class Service(BaseDocument):
@@ -81,13 +101,17 @@ class EnquiryIn(BaseModel):
         service = (data.get("service") or "").strip()[:100]
         message = (data.get("message") or "").strip()[:1000]
 
-        if len(name) < 2 or len(name) > 80:
+        if len(name) < 2:
             raise HTTPException(status_code=400, detail="Please enter your name.")
+        if len(name) > 80:
+            raise HTTPException(status_code=400, detail="Name is too long (max 80 letters).")
 
-        # Phone digits count must be between 10 and 13 digits, allowing +, spaces, -
-        digits_only = re.sub(r"\D", "", phone)
-        if len(digits_only) < 10 or len(digits_only) > 13 or not re.fullmatch(r"[0-9+\-\s]{10,20}", phone):
-            raise HTTPException(status_code=400, detail="Please enter a valid phone number.")
+        # Accept common shapes ("98765 43210", "098765-43210", "(+91) 98765 43210")
+        # and store one standard form so call / WhatsApp links always work.
+        normalized = normalize_phone(phone) if len(phone) <= 24 else None
+        if normalized is None:
+            raise HTTPException(status_code=400, detail="Please enter a valid 10-digit phone number.")
+        phone = normalized
 
         return cls(name=name, phone=phone, service=service, message=message)
 

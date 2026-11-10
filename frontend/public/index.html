@@ -3,16 +3,47 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/png" href="/logo-192.png" />
+    <link rel="apple-touch-icon" href="/logo-192.png" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#1A1412" />
     <meta name="description" content="ANWESHAN Infra — Interiors · Spaces · Lifestyle. Warm, elegant interiors for homes and shops, plus honest furniture assessment. One tap to WhatsApp or call us." />
     <title>ANWESHAN Infra — Interiors · Spaces · Lifestyle</title>
+    <link rel="canonical" href="https://anweshaninfra.in/" />
+
+    <!-- Link preview when the website is shared on WhatsApp, Instagram, Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ANWESHAN Infra" />
+    <meta property="og:title" content="ANWESHAN Infra — Interiors · Spaces · Lifestyle" />
+    <meta property="og:description" content="Warm, elegant interiors for homes and shops. Free first visit. One tap to WhatsApp or call us." />
+    <meta property="og:url" content="https://anweshaninfra.in/" />
+    <meta property="og:image" content="https://anweshaninfra.in/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://anweshaninfra.in/og-image.jpg" />
+
+    <!-- Start downloading the big first-screen photo straight away (phones get a small one) -->
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link
+      rel="preload"
+      as="image"
+      fetchpriority="high"
+      href="https://images.unsplash.com/photo-1700226034367-2fb120f48dfa?crop=entropy&cs=srgb&fm=jpg&q=80&auto=format&w=1920"
+      imagesrcset="https://images.unsplash.com/photo-1700226034367-2fb120f48dfa?crop=entropy&cs=srgb&fm=jpg&q=80&auto=format&w=828 828w, https://images.unsplash.com/photo-1700226034367-2fb120f48dfa?crop=entropy&cs=srgb&fm=jpg&q=80&auto=format&w=1280 1280w, https://images.unsplash.com/photo-1700226034367-2fb120f48dfa?crop=entropy&cs=srgb&fm=jpg&q=80&auto=format&w=1920 1920w"
+      imagesizes="100vw"
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      /* Dark page colour while the app loads, so phones don't flash a white screen */
+      html, body { background: #1A1412; margin: 0; }
+    </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>Please enable JavaScript to see the ANWESHAN Infra website, or call us on +91 86584 29239.</noscript>
     <div id="root"></div>
   </body>
 </html>

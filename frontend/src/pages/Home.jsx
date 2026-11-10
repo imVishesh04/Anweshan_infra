@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import Lenis from "lenis";
 import { SiteProvider } from "@/lib/SiteContext";
 import Navbar from "@/sections/Navbar";
 import Hero from "@/sections/Hero";
@@ -13,25 +11,9 @@ import Footer from "@/sections/Footer";
 import MobileBar from "@/components/MobileBar";
 
 export default function Home() {
-  useEffect(() => {
-    const lenis = new Lenis({ lerp: 0.09, smoothWheel: true });
-    window.__lenis = lenis;
-    let raf;
-    const loop = (t) => {
-      lenis.raf(t);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => {
-      cancelAnimationFrame(raf);
-      lenis.destroy();
-      window.__lenis = null;
-    };
-  }, []);
-
   return (
     <SiteProvider>
-      <div className="min-h-screen bg-cream text-espresso pb-[76px] md:pb-0">
+      <div className="min-h-screen bg-cream text-espresso pb-[calc(84px+env(safe-area-inset-bottom))] md:pb-0">
         <Navbar />
         <main>
           <Hero />

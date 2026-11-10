@@ -32,7 +32,7 @@ module.exports = {
         },
         cream: { DEFAULT: '#FDFBF7', alt: '#F4EFE6', deep: '#EFE7D8' },
         espresso: { DEFAULT: '#1A1412', soft: '#2A211C', muted: '#524844' },
-        brass: { DEFAULT: '#C59B27', light: '#DFBA47', dark: '#9A7514' },
+        brass: { DEFAULT: '#C59B27', light: '#DFBA47', dark: '#7E5F0E' },
         terracotta: '#A85338',
         wa: { DEFAULT: '#1E7D46', dark: '#166B3A' }
       },

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Loader2, Lock, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
-import { api, formatApiError } from "@/lib/api";
+import { SESSION_EXPIRED_EVENT, adminApi, api, formatApiError } from "@/lib/api";
 import { ArchMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +18,18 @@ export default function Admin() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api
-      .get("/admin/me")
+    // adminApi tries the 7-day refresh cookie, so reopening the admin later
+    // does not ask for the password again.
+    adminApi({ method: "get", url: "/admin/me" })
       .then(() => setAuthed(true))
       .catch(() => setAuthed(false));
+
+    const onExpired = () => {
+      setAuthed(false);
+      setError("Your session ended. Please log in again.");
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
   const login = async (e) => {
@@ -32,7 +40,11 @@ export default function Admin() {
       await api.post("/admin/login", { password });
       setAuthed(true);
     } catch (err) {
-      setError(formatApiError(err, "Wrong password. Please try again."));
+      if (err?.response?.status === 403) {
+        setError("Please open the admin at https://anweshaninfra.in/admin");
+      } else {
+        setError(formatApiError(err, "Wrong password. Please try again."));
+      }
     } finally {
       setBusy(false);
     }
@@ -41,9 +53,12 @@ export default function Admin() {
   const logout = async () => {
     try {
       await api.post("/admin/logout");
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* the cookies are cleared either way */
+    }
     setAuthed(false);
     setPassword("");
+    setError("");
   };
 
   if (authed === null) {
@@ -81,7 +96,7 @@ export default function Admin() {
               />
             </div>
             {error && (
-              <p className="mt-2.5 text-sm font-semibold text-terracotta" data-testid="admin-login-error">{error}</p>
+              <p role="alert" className="mt-2.5 text-sm font-semibold text-terracotta" data-testid="admin-login-error">{error}</p>
             )}
           </div>
 
@@ -104,13 +119,13 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-cream text-espresso" data-testid="admin-dashboard">
-      <header className="sticky top-0 z-40 bg-cream/85 backdrop-blur-xl border-b border-[#E6DEC8]">
-        <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-cream border-b border-[#E6DEC8]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <span className="grid place-items-center w-10 h-10 rounded-xl bg-cream border border-[#E6DEC8] overflow-hidden">
               <ArchMark className="w-7 h-7" />
             </span>
-            <span className="font-serif font-semibold tracking-wide text-lg">Studio Admin</span>
+            <span className="hidden sm:inline font-serif font-semibold tracking-wide text-lg">Studio Admin</span>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-espresso-muted hover:text-espresso px-3 h-10 rounded-full hover:bg-cream-alt transition-colors" data-testid="admin-view-site-link">
@@ -125,11 +140,12 @@ export default function Admin() {
 
       <main className="max-w-6xl mx-auto px-5 py-8 pb-20">
         <Tabs defaultValue="ideas">
-          <TabsList className="bg-cream-alt rounded-full p-1 h-12" data-testid="admin-tabs">
-            <TabsTrigger value="ideas" className="rounded-full px-5 data-[state=active]:bg-espresso data-[state=active]:text-cream" data-testid="admin-tab-ideas">Design Ideas</TabsTrigger>
-            <TabsTrigger value="services" className="rounded-full px-5 data-[state=active]:bg-espresso data-[state=active]:text-cream" data-testid="admin-tab-services">Services & Prices</TabsTrigger>
-            <TabsTrigger value="enquiries" className="rounded-full px-5 data-[state=active]:bg-espresso data-[state=active]:text-cream" data-testid="admin-tab-enquiries">Enquiries</TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-full px-5 data-[state=active]:bg-espresso data-[state=active]:text-cream" data-testid="admin-tab-settings">My Contact Info</TabsTrigger>
+          {/* Scrolls sideways on narrow phones instead of pushing tabs off-screen */}
+          <TabsList className="bg-cream-alt rounded-full p-1 h-12 max-w-full overflow-x-auto justify-start" data-testid="admin-tabs">
+            <TabsTrigger value="ideas" className="shrink-0 rounded-full px-4 sm:px-5 data-[state=active]:bg-espresso data-[state=active]:text-cream" data-testid="admin-tab-ideas">Design Ideas</TabsTrigger>
+            <TabsTrigger value="services" className="shrink-0 rounded-full px-4 sm:px-5 data-[state=active]:bg-espresso data-[state=active]:text-cream" data-testid="admin-tab-services">Services & Prices</TabsTrigger>
+            <TabsTrigger value="enquiries" className="shrink-0 rounded-full px-4 sm:px-5 data-[state=active]:bg-espresso data-[state=active]:text-cream" data-testid="admin-tab-enquiries">Enquiries</TabsTrigger>
+            <TabsTrigger value="settings" className="shrink-0 rounded-full px-4 sm:px-5 data-[state=active]:bg-espresso data-[state=active]:text-cream" data-testid="admin-tab-settings">My Contact Info</TabsTrigger>
           </TabsList>
 
           <TabsContent value="ideas" className="mt-8"><IdeasTab /></TabsContent>

@@ -2,8 +2,10 @@ import contextlib
 import io
 import logging
 import uuid
+import warnings
 from datetime import UTC, datetime
 
+import anyio
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from PIL import Image, ImageOps
 from pymongo import ASCENDING, DESCENDING, ReturnDocument
@@ -19,6 +21,7 @@ from app.models import (
     SettingsIn,
     SiteSettings,
 )
+from app.phone import normalize_instagram, require_phone
 from app.security import require_admin, verify_csrf
 from app.storage import get_storage
 
@@ -30,21 +33,89 @@ MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MB
 Image.MAX_IMAGE_PIXELS = 25_000_000  # Sane decompression bomb limit
 
 
+class ImageRejected(ValueError):
+    """Raised with a message the admin user can understand."""
+
+
+_FORMATS = {
+    "JPEG": ("jpg", "image/jpeg"),
+    "PNG": ("png", "image/png"),
+    "WEBP": ("webp", "image/webp"),
+}
+MAX_DIMENSION = 2000
+
+
+def _process_image(raw_data: bytes) -> tuple[bytes, str, str]:
+    with warnings.catch_warnings():
+        # Treat "very large image" warnings as errors instead of silently accepting them.
+        warnings.simplefilter("error", Image.DecompressionBombWarning)
+        try:
+            img = Image.open(io.BytesIO(raw_data))
+            img_format = (img.format or "").upper()
+        except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+            raise ImageRejected("This photo's resolution is too high. Please use a smaller photo.")
+        except Exception:
+            raise ImageRejected(
+                "Only JPG, PNG or WEBP photos are allowed. On iPhone, set Camera > Formats to 'Most Compatible'."
+            )
+
+        if img_format not in _FORMATS:
+            raise ImageRejected(
+                "Only JPG, PNG or WEBP photos are allowed. On iPhone, set Camera > Formats to 'Most Compatible'."
+            )
+        file_ext, content_type = _FORMATS[img_format]
+
+        try:
+            if img_format == "JPEG":
+                # Let the JPEG decoder skip detail we would throw away anyway.
+                img.draft("RGB", (MAX_DIMENSION, MAX_DIMENSION))
+            img.load()
+            with contextlib.suppress(Exception):
+                img = ImageOps.exif_transpose(img)
+            img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
+
+            # Re-encode cleanly (this also strips EXIF / GPS location data)
+            out = io.BytesIO()
+            if img_format == "JPEG":
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                img.save(out, format="JPEG", quality=85, optimize=True)
+            elif img_format == "PNG":
+                img.save(out, format="PNG", optimize=True)
+            else:
+                img.save(out, format="WEBP", quality=85)
+        except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+            raise ImageRejected("This photo's resolution is too high. Please use a smaller photo.")
+        except (OSError, ValueError, SyntaxError):
+            raise ImageRejected("This photo file seems damaged. Please try another photo.")
+
+    return out.getvalue(), file_ext, content_type
+
+
 async def _cleanup_uploaded_image(image_path: str | None, db, storage) -> None:
+    """Delete an uploaded photo once nothing (idea or service) uses it any more."""
     if not image_path or image_path.startswith("http"):
+        return
+    still_used = await db.ideas.count_documents({"image": image_path}) + await db.services.count_documents(
+        {"image": image_path}
+    )
+    if still_used:
         return
     file_doc = await db.files.find_one({"storage_path": image_path, "is_deleted": False})
     if file_doc:
         await db.files.update_one({"storage_path": image_path}, {"$set": {"is_deleted": True}})
-        await storage.delete(image_path)
-        logger.info("Cleaned up orphaned uploaded file: %s", image_path)
+        try:
+            await storage.delete(image_path)
+        except Exception as exc:
+            logger.error("Could not delete stored file %s: %s", image_path, type(exc).__name__)
+        logger.info("Cleaned up unused uploaded file: %s", image_path)
 
 
 # --- Services CRUD ---
 @admin_content_router.get("/services")
 async def admin_services(_: dict = Depends(require_admin), db=Depends(db_dependency)):
     docs = await db.services.find({}, {"_id": 0}).sort([("sort_order", ASCENDING)]).to_list(100)
-    return [Service.from_mongo(d).model_dump() for d in docs]
+    return Service.list_from_mongo(docs)
 
 
 @admin_content_router.post("/services", response_model=Service)
@@ -106,17 +177,18 @@ async def admin_delete_service(
     settings: Settings = Depends(get_settings),
 ):
     verify_csrf(request, settings)
-    result = await db.services.delete_one({"id": service_id})
-    if not result.deleted_count:
+    doc = await db.services.find_one_and_delete({"id": service_id})
+    if not doc:
         raise HTTPException(status_code=404, detail="Service not found")
+    await _cleanup_uploaded_image(doc.get("image"), db, get_storage(settings))
     return {"ok": True}
 
 
 # --- Design Ideas CRUD ---
 @admin_content_router.get("/ideas")
 async def admin_ideas(_: dict = Depends(require_admin), db=Depends(db_dependency)):
-    docs = await db.ideas.find({}, {"_id": 0}).sort([("created_at", DESCENDING)]).to_list(200)
-    return [DesignIdea.from_mongo(d).model_dump() for d in docs]
+    docs = await db.ideas.find({}, {"_id": 0}).sort([("created_at", DESCENDING)]).to_list(500)
+    return DesignIdea.list_from_mongo(docs)
 
 
 @admin_content_router.post("/ideas", response_model=DesignIdea)
@@ -164,22 +236,28 @@ async def admin_update_idea(
     if "category" in updates and updates["category"] not in ("homes", "shops", "furniture"):
         updates["category"] = "homes"
 
-    # Check for image replacement to clean up orphan
-    old_doc = await db.ideas.find_one({"id": idea_id})
+    # An empty photo field means "keep the current photo", never "remove it".
+    if "image" in updates and not str(updates["image"]).strip():
+        updates.pop("image")
+        if not updates:
+            raise HTTPException(status_code=400, detail="Nothing to update.")
+
+    old_doc = await db.ideas.find_one_and_update(
+        {"id": idea_id},
+        {"$set": updates},
+        return_document=ReturnDocument.BEFORE,
+    )
     if not old_doc:
         raise HTTPException(status_code=404, detail="Idea not found")
 
-    new_image = updates.get("image")
+    # Remove the replaced photo only after the idea points at the new one.
     old_image = old_doc.get("image")
-    if new_image and old_image and new_image != old_image:
-        storage = get_storage(settings)
-        await _cleanup_uploaded_image(old_image, db, storage)
+    if "image" in updates and old_image and updates["image"] != old_image:
+        await _cleanup_uploaded_image(old_image, db, get_storage(settings))
 
-    doc = await db.ideas.find_one_and_update(
-        {"id": idea_id},
-        {"$set": updates},
-        return_document=ReturnDocument.AFTER,
-    )
+    doc = await db.ideas.find_one({"id": idea_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Idea not found")
     return DesignIdea.from_mongo(doc)
 
 
@@ -196,20 +274,16 @@ async def admin_delete_idea(
     if not doc:
         raise HTTPException(status_code=404, detail="Idea not found")
 
-    image_path = doc.get("image")
-    if image_path:
-        storage = get_storage(settings)
-        await _cleanup_uploaded_image(image_path, db, storage)
-
     await db.ideas.delete_one({"id": idea_id})
+    await _cleanup_uploaded_image(doc.get("image"), db, get_storage(settings))
     return {"ok": True}
 
 
 # --- Enquiries CRUD ---
 @admin_content_router.get("/enquiries")
 async def admin_enquiries(_: dict = Depends(require_admin), db=Depends(db_dependency)):
-    docs = await db.enquiries.find({}, {"_id": 0}).sort([("created_at", DESCENDING)]).to_list(200)
-    return [Enquiry.from_mongo(d).model_dump() for d in docs]
+    docs = await db.enquiries.find({}, {"_id": 0}).sort([("created_at", DESCENDING)]).to_list(1000)
+    return Enquiry.list_from_mongo(docs)
 
 
 @admin_content_router.put("/admin/enquiries/{enquiry_id}/read")
@@ -255,6 +329,17 @@ async def admin_settings(
 ):
     verify_csrf(request, settings)
     updates = {k: v for k, v in input.model_dump(exclude_unset=True).items() if v is not None}
+    # Phone / WhatsApp are used to build every call and WhatsApp button on the site,
+    # so they must never be saved empty or in a shape the links cannot use.
+    if "phone" in updates:
+        updates["phone"] = require_phone(updates["phone"], "phone number")
+    if "whatsapp" in updates:
+        updates["whatsapp"] = require_phone(updates["whatsapp"], "WhatsApp number")
+    if "instagram" in updates:
+        updates["instagram"] = normalize_instagram(updates["instagram"])
+    for key in ("address", "hours"):
+        if key in updates:
+            updates[key] = updates[key].strip()[:300]
     updates["updated_at"] = datetime.now(UTC).isoformat()
     await db.settings.update_one({"id": "site"}, {"$set": updates}, upsert=True)
     doc = await db.settings.find_one({"id": "site"})
@@ -290,51 +375,14 @@ async def admin_upload(
     if not raw_data:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-    # 2. Pillow verification & format check
+    # 2-5. Decode, rotate, resize and re-encode in a worker thread: this takes
+    # 0.3+ s for a phone photo and would otherwise freeze the site for everyone.
     try:
-        img = Image.open(io.BytesIO(raw_data))
-        img_format = (img.format or "").upper()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Only JPG, PNG or WEBP images are allowed.")
-
-    format_mapping = {
-        "JPEG": ("jpg", "image/jpeg"),
-        "PNG": ("png", "image/png"),
-        "WEBP": ("webp", "image/webp"),
-    }
-    if img_format not in format_mapping:
-        raise HTTPException(status_code=400, detail="Only JPG, PNG or WEBP images are allowed.")
-
-    file_ext, target_content_type = format_mapping[img_format]
-
-    # 3. Auto-orient by EXIF orientation
-    with contextlib.suppress(Exception):
-        img = ImageOps.exif_transpose(img)
-
-    # 4. Resize if longest side > 2000px
-    max_dimension = 2000
-    w, h = img.size
-    if max(w, h) > max_dimension:
-        if w > h:
-            new_w = max_dimension
-            new_h = int(h * (max_dimension / w))
-        else:
-            new_h = max_dimension
-            new_w = int(w * (max_dimension / h))
-        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-    # 5. Re-encode cleanly (stripping EXIF / GPS metadata)
-    output_io = io.BytesIO()
-    if img_format == "JPEG":
-        if img.mode != "RGB":
-            img = img.convert("RGB")
-        img.save(output_io, format="JPEG", quality=85, optimize=True)
-    elif img_format == "PNG":
-        img.save(output_io, format="PNG", optimize=True)
-    elif img_format == "WEBP":
-        img.save(output_io, format="WEBP", quality=85)
-
-    processed_bytes = output_io.getvalue()
+        processed_bytes, file_ext, target_content_type = await anyio.to_thread.run_sync(
+            _process_image, raw_data
+        )
+    except ImageRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     # 6. Save to storage
     file_id = str(uuid.uuid4())
