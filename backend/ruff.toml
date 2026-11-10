@@ -8,3 +8,6 @@ ignore = [
     "B904",  # Exception chaining for HTTPExceptions
     "E501",  # Line length
 ]
+
+[lint.per-file-ignores]
+"scripts/*" = ["E402"]
