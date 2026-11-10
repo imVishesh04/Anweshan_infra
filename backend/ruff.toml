@@ -1,0 +1,10 @@
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    "B008",  # FastAPI Depends in function defaults
+    "B904",  # Exception chaining for HTTPExceptions
+    "E501",  # Line length
+]
