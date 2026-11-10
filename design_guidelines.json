@@ -1,0 +1,106 @@
+{
+  "project_title": "AURELIA Interiors - High-End Editorial Interior Design Platform & Studio",
+  "art_direction": {
+    "theme": "Warm & Elegant Editorial Architectural Craft (Warm Light Theme)",
+    "palette": {
+      "background": "#FDFBF7",
+      "background_alt": "#F4EFE6",
+      "surface_card": "#FAF7F2",
+      "surface_card_border": "#E6DEC8",
+      "espresso_ink": "#1A1412",
+      "espresso_muted": "#524844",
+      "brass_gold": "#C59B27",
+      "brass_gold_light": "#DFBA47",
+      "brass_gold_dark": "#9A7514",
+      "terracotta_warm": "#A85338",
+      "cream_white": "#FFFFFF"
+    },
+    "typography": {
+      "headline_font": "Playfair Display / Cormorant Garamond (Serif, High Elegance, Tight Tracking)",
+      "body_font": "Plus Jakarta Sans / Manrope (Clean Humanist Sans, High Legibility)",
+      "accent_mono": "JetBrains Mono (For Specs, Admin Codes, Badges, Prices)",
+      "hierarchy": {
+        "h1": "text-4xl sm:text-5xl lg:text-6xl font-serif tracking-tight leading-[1.08]",
+        "h2": "text-2xl sm:text-3xl lg:text-4xl font-serif tracking-tight leading-snug",
+        "h3": "text-xl sm:text-2xl font-serif font-medium",
+        "body": "text-base sm:text-lg font-sans text-espresso_muted leading-relaxed",
+        "eyebrow": "text-xs uppercase tracking-[0.25em] font-sans font-semibold text-brass_gold"
+      }
+    },
+    "logo_mark": "Original Brass Arch Monogram SVG logo mark representing 'Anweshan Infra'. An arched architectural vault motif crafted with brushed brass gradient strokes and elegant serif wordmark."
+  },
+  "layout_and_spacing": {
+    "spacing_philosophy": "Generous editorial spacing (2x-3x typical whitespace), asymmetric Swiss-grid cards, padded containers (p-6 to p-12) to prevent text/border collisions.",
+    "bento_grid": "Tetris Grid for Design Ideas & Services (col-span-full, col-span-8, col-span-4, col-span-2 fillers) with staggered Framer Motion entrance animations.",
+    "header_navigation": "Sticky glassmorphism header with backdrop-blur-xl bg-[#FDFBF7]/85 border-b border-[#E6DEC8]/60, featuring AURELIA SVG arch logo, nav links (Services, Design Ideas, How It Works, Contact), Direct Call button, WhatsApp primary CTA, and subtle Admin Entrance link.",
+    "sticky_mobile_bottom_bar": "Fixed bottom bar on mobile viewports (<768px) with direct 1-tap Call button (Phone icon + 'Call Studio') and WhatsApp button (WhatsApp icon + 'Quick Chat'). High contrast brass/espresso styling."
+  },
+  "key_features_and_user_flows": {
+    "hero_section": "Kinetic luxury hero with signature line-by-line masked headline reveal, full-width high-res architectural ambient background with soft gradient overlay (bg-black/30), interactive Quick Project Filter chip buttons, 1-tap WhatsApp consultation CTA & direct phone call button, plus smooth scroll indicator.",
+    "services_section": "Interactive catalog of services: Home Interior Transformation, Luxury Shop & Retail Fitting, and Custom Furniture & Woodwork Assessment. Each service card shows price tag (editable in admin), detailed scope, estimated timeline, icon+label for easy low-literacy understanding, and a direct 'Enquire for This Service' button opening pre-filled WhatsApp/Form modal.",
+    "design_ideas_gallery": "Filterable gallery (All, Homes, Shops, Furniture) displaying curated real interior designs with arch-clipped images, hover zoom micro-interactions, room specs, material highlights, and direct 'Save Idea' or 'Ask About This Design' drawer.",
+    "interactive_furniture_assessment_tool": "Visual multi-step estimator tool allowing clients (or low-literacy users) to tap visual cards (e.g., Sofa Repair, Wardrobe Polish, Wood Re-upholstery) to calculate instant rough price estimates and click 1-tap WhatsApp to send the assessment.",
+    "how_it_works": "Simple 4-step visually directed process (1. Tap WhatsApp / Call -> 2. Free Site/Furniture Visit -> 3. 3D Idea & Fixed Quote -> 4. Execution & Handover). Clear numbers, icon badges, and simple language.",
+    "contact_and_enquiry_section": "Comprehensive contact suite featuring direct WhatsApp button, 1-tap Phone Call button, Instagram direct profile link, studio location address with interactive map preview, and a simple 4-input Enquiry Form (Name, Phone, Service Choice, Message). Submissions are saved locally/backend for admin review with instant Sonner toast notification.",
+    "hidden_admin_portal": "Accessible via /admin or footer link. Secured with password gate (default: 'aurelia2026'). Admin features: (1) Add/Edit/Delete Design Ideas with image upload/URL preview; (2) Edit Service Base Prices & Timelines dynamically; (3) Read, filter, and manage customer enquiries received from the public contact form."
+  },
+  "image_urls": {
+    "hero_bg": "https://images.unsplash.com/photo-1700226034367-2fb120f48dfa?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ6MzR8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBpbnRlcmlvciUyMGRlc2lnbiUyMGxpdmluZyUyMHJvb20lMjB3YXJtJTIwY3JlYW0lMjBnb2xkfGVufDB8fHx8MTc5Mzg3OTczM3ww&ixlib=rb-4.1.0&q=85",
+    "living_room_1": "https://images.unsplash.com/photo-1632120377007-c2adc3017b1e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ6MzR8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBpbnRlcmlvciUyMGRlc2lnbiUyMGxpdmluZyUyMHJvb20lMjB3YXJtJTIwY3JlYW0lMjBnb2xkfGVufDB8fHx8MTc5Mzg3OTczM3ww&ixlib=rb-4.1.0&q=85",
+    "living_room_2": "https://images.unsplash.com/photo-1750639258774-9a714379a093?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ6MzR8MHwxfHNlYXJjaHw0fHxsdXh1cnklMjBpbnRlcmlvciUyMGRlc2lnbiUyMGxpdmluZyUyMHJvb20lMjB3YXJtJTIwY3JlYW0lMjBnb2xkfGVufDB8fHx8MTc5Mzg3OTczM3ww&ixlib=rb-4.1.0&q=85",
+    "living_room_3": "https://images.unsplash.com/photo-1678762200388-51e11225d4de?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ6MzR8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBpbnRlcmlvciUyMGRlc2lnbiUyMGxpdmluZyUyMHJvb20lMjB3YXJtJTIwY3JlYW0lMjBnb2xkfGVufDB8fHx8MTc5Mzg3OTczM3ww&ixlib=rb-4.1.0&q=85",
+    "shop_1": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjByZXRhaWwlMjBzaG9wJTIwaW50ZXJpb3IlMjBsdXh1cnl8ZW58MHx8fHwxNzkyNjU4MjQ1fDA&ixlib=rb-4.1.0&q=85",
+    "shop_2": "https://images.unsplash.com/photo-1546213290-e1b492ab3eee?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjByZXRhaWwlMjBzaG9wJTIwaW50ZXJpb3IlMjBsdXh1cnl8ZW58MHx8fHwxNzkyNjU4MjQ1fDA&ixlib=rb-4.1.0&q=85",
+    "shop_3": "https://images.pexels.com/photos/135620/pexels-photo-135620.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "furniture_1": "https://images.unsplash.com/photo-1768144092684-c1a5dd6c7aad?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwyfHx3YXJtJTIwbHV4dXJ5JTIwZnVybml0dXJlJTIwaW50ZXJpb3IlMjB3b29kJTIwY2hhaXIlMjBzb2ZhfGVufDB8fHx8MTc4ODI3MjYyNXww&ixlib=rb-4.1.0&q=85",
+    "furniture_2": "https://images.unsplash.com/photo-1762545078318-8443881c2d83?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwzfHx3YXJtJTIwbHV4dXJ5JTIwZnVybml0dXJlJTIwaW50ZXJpb3IlMjB3b29kJTIwY2hhaXIlMjBzb2ZhfGVufDB8fHx8MTc4ODI3MjYyNXww&ixlib=rb-4.1.0&q=85",
+    "furniture_3": "https://images.unsplash.com/photo-1771219491795-3b4dafc1cdf3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHx3YXJtJTIwbHV4dXJ5JTIwZnVybml0dXJlJTIwaW50ZXJpb3IlMjB3b29kJTIwY2hhaXIlMjBzb2ZhfGVufDB8fHx8MTc4ODI3MjYyNXww&ixlib=rb-4.1.0&q=85"
+  },
+  "motion_and_micro_interactions": {
+    "smooth_scrolling": "Implement Lenis smooth scrolling for continuous weight and luxury momentum.",
+    "scroll_animations": "Framer Motion staggered entrance for grid items, reveal-up transitions on text blocks.",
+    "marquee": "Slow editorial text ticker with warm beige background (#F4EFE6), displaying values: 'ARCHITECTURAL RESIDENCES • BOUTIQUE STORES • CUSTOM FURNITURE RESTORATION • CRAFTED IN BRASS & MAHOGANY'.",
+    "image_frames": "Arch-shaped image masks (rounded-t-full or asymmetric radius) paired with gentle scale (scale-105) on container hover.",
+    "buttons": "Pill & Arch shaped primary CTAs with subtle brass glow box-shadow, gold border sheen, and magnetic hover feel."
+  },
+  "testing_attributes": {
+    "rule": "Every button, link, form field, card, filter tab, and modal trigger MUST feature a kebab-case data-testid attribute.",
+    "key_testids": [
+      "nav-brand-logo",
+      "nav-whatsapp-button",
+      "nav-call-button",
+      "nav-admin-link",
+      "hero-whatsapp-cta",
+      "hero-call-cta",
+      "services-section",
+      "service-card-home-interiors",
+      "service-card-shop-interiors",
+      "service-card-furniture-assessment",
+      "gallery-filter-all",
+      "gallery-filter-homes",
+      "gallery-filter-shops",
+      "gallery-filter-furniture",
+      "design-idea-card",
+      "furniture-estimator-card",
+      "contact-form-name-input",
+      "contact-form-phone-input",
+      "contact-form-service-select",
+      "contact-form-message-input",
+      "contact-form-submit-button",
+      "mobile-sticky-call-btn",
+      "mobile-sticky-whatsapp-btn",
+      "admin-password-input",
+      "admin-login-button",
+      "admin-add-idea-button",
+      "admin-edit-price-input"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "You are building React JS files (.js / .jsx), NOT TypeScript .tsx files.",
+    "Maintain the strict Warm Light Theme (Cream #FDFBF7, Espresso #1A1412, Brass Gold #C59B27). No default blue/purple gradients.",
+    "Ensure all contact CTAs open real actions (WhatsApp link `https://wa.me/...`, Phone `tel:...`, Instagram `https://instagram.com/...`).",
+    "Keep the UI extremely accessible and icon+label heavy so first-time or low-literacy users can operate it seamlessly.",
+    "Build the complete hidden /admin route with password authentication gate, design idea manager, service price manager, and enquiry viewer.",
+    "Add explicit data-testid attributes to all interactive elements as specified in testing_attributes."
+  ]
+}
