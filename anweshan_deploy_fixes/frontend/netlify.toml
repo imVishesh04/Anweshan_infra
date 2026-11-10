@@ -17,7 +17,7 @@
 #    in every browser (including Safari / iPhone).
 [[redirects]]
   from = "/api/*"
-  to = "https://api.anweshaninfra.in/api/:splat"
+  to = "https://anweshaninfra-production.up.railway.app/api/:splat"
   status = 200
   force = true
 
