@@ -139,13 +139,16 @@ let webpackConfig = {
 
 webpackConfig.devServer = (devServerConfig) => {
   // Proxy /api to backend in development so browser sees single origin (cookies work seamlessly)
-  devServerConfig.proxy = {
-    ...devServerConfig.proxy,
-    "/api": {
-      target: process.env.REACT_APP_BACKEND_PROXY_URL || "http://localhost:8001",
+  const proxyTarget = process.env.REACT_APP_BACKEND_PROXY_URL || "http://localhost:8001";
+  const existingProxy = Array.isArray(devServerConfig.proxy) ? devServerConfig.proxy : [];
+  devServerConfig.proxy = [
+    ...existingProxy,
+    {
+      context: ["/api"],
+      target: proxyTarget,
       changeOrigin: true,
     },
-  };
+  ];
 
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {

@@ -9,10 +9,15 @@ logger = logging.getLogger("anweshan.ratelimit")
 
 def parse_dt(val):
     if isinstance(val, datetime):
+        if val.tzinfo is None:
+            return val.replace(tzinfo=UTC)
         return val
     if isinstance(val, str):
         try:
-            return datetime.fromisoformat(val)
+            dt = datetime.fromisoformat(val)
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=UTC)
+            return dt
         except ValueError:
             return None
     return None
