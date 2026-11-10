@@ -88,3 +88,8 @@ android-sdk/
 
 # overlay black-box crash/user-report dumps — session data, never history
 **/.emergent/recordings/
+
+emergent_export/
+emergent_export.zip
+PROMPT.md
+HOW_TO_USE.md
