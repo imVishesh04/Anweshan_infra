@@ -8,7 +8,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.db import close_db, init_db
 from app.limits import BodySizeLimitMiddleware
-from app.routers import admin_auth_router, admin_content_router, public_router
+from app.routers import admin_auth_router, admin_content_router, public_router, whatsapp_router
 from app.security import hash_password
 from app.seed import seed_data
 from app.storage import get_storage
@@ -92,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(public_router)
     app.include_router(admin_auth_router)
     app.include_router(admin_content_router)
+    app.include_router(whatsapp_router)
 
     return app
 

@@ -29,6 +29,12 @@ INDEXES: dict[str, list[IndexModel]] = {
         IndexModel([("identifier", ASCENDING)], name="identifier_asc"),
         IndexModel([("expires_at", ASCENDING)], name="login_attempts_ttl", expireAfterSeconds=0),
     ],
+    "wa_seen": [
+        IndexModel([("expires_at", ASCENDING)], name="wa_seen_ttl", expireAfterSeconds=0),
+    ],
+    "wa_sessions": [
+        IndexModel([("updated_at", ASCENDING)], name="wa_sessions_ttl", expireAfterSeconds=60 * 60 * 24 * 90),
+    ],
     "enquiry_rate_limits": [
         IndexModel([("ip", ASCENDING)], name="ip_asc"),
         IndexModel([("expires_at", ASCENDING)], name="enquiry_limits_ttl", expireAfterSeconds=0),

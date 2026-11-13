@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Armchair, Home, LayoutGrid, Store } from "lucide-react";
-import { api, imgUrl, waLink } from "@/lib/api";
+import { api, categoryRef, imgUrl, waLink, withRef } from "@/lib/api";
 import { useSite } from "@/lib/SiteContext";
 import { WhatsAppIcon } from "../components/Logo";
 import Reveal, { EASE, Eyebrow } from "../components/Reveal";
@@ -125,7 +125,7 @@ export default function Gallery() {
                   <a
                     href={waLink(
                       site.whatsapp,
-                      `Hi Anweshan Infra! I loved your "${idea.title}" design. Can we do something like this for my space?`
+                      withRef(`Hi Anweshan Infra! I loved your "${idea.title}" design. Can we do something like this for my space?`, categoryRef(idea.category, idea.title))
                     )}
                     target="_blank"
                     rel="noreferrer"

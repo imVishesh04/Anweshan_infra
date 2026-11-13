@@ -91,7 +91,7 @@ export default function EnquiriesTab() {
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex flex-wrap items-center gap-2.5">
                     {!eq.read && <span className="w-2 h-2 rounded-full bg-brass animate-slow-pulse" data-testid={`enquiry-unread-dot-${eq.id}`} />}
                     <h3 className="font-serif text-xl">{eq.name}</h3>
                     {eq.service && (
@@ -99,9 +99,14 @@ export default function EnquiriesTab() {
                         {eq.service}
                       </span>
                     )}
+                    {eq.source === "whatsapp" && (
+                      <span className="text-[10px] font-bold uppercase tracking-[0.15em] bg-[#DCF8C6] text-[#075E54] rounded-full px-2.5 py-1" data-testid={`enquiry-source-${eq.id}`}>
+                        WhatsApp
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1.5 text-sm text-espresso-muted">{formatDate(eq.created_at)}</p>
-                  {eq.message && <p className="mt-2 text-sm text-espresso leading-relaxed">"{eq.message}"</p>}
+                  {eq.message && <p className="mt-2 text-sm text-espresso leading-relaxed whitespace-pre-line">"{eq.message}"</p>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <a

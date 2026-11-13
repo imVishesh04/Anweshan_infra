@@ -38,8 +38,11 @@ async def send_lead_notifications(enquiry_dict: dict, settings: Settings) -> Non
     service = enquiry_dict.get("service") or "Not chosen"
     message = enquiry_dict.get("message") or "-"
 
+    source = "WhatsApp bot" if enquiry_dict.get("source") == "whatsapp" else "Website form"
+
     body = (
         "New Enquiry — ANWESHAN Infra\n"
+        f"From: {source}\n"
         f"Name: {name}\n"
         f"Phone: {phone}\n"
         f"Service: {service}\n"
@@ -116,3 +119,40 @@ async def send_lead_notifications(enquiry_dict: dict, settings: Settings) -> Non
 
     if not notified:
         logger.info("No lead notifier configured - skipping lead alert")
+
+
+def telegram_configured(settings: Settings) -> bool:
+    return bool(settings.NOTIFY_TELEGRAM_BOT_TOKEN and settings.NOTIFY_TELEGRAM_CHAT_ID)
+
+
+async def send_telegram_text(text: str, settings: Settings) -> None:
+    """Plain Telegram message to the owner (used for WhatsApp follow-up messages)."""
+    if not telegram_configured(settings):
+        return
+    try:
+        url = f"https://api.telegram.org/bot{settings.NOTIFY_TELEGRAM_BOT_TOKEN}/sendMessage"
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.post(url, json={"chat_id": settings.NOTIFY_TELEGRAM_CHAT_ID, "text": text[:4000]})
+        if not res.is_success:
+            logger.warning("Telegram message responded with status %s", res.status_code)
+    except Exception as exc:
+        logger.error("Telegram message failed: %s", type(exc).__name__)
+
+
+async def send_telegram_photo(data: bytes, mime: str, caption: str, settings: Settings) -> None:
+    """Forward a customer's photo to the owner's Telegram."""
+    if not telegram_configured(settings):
+        return
+    try:
+        url = f"https://api.telegram.org/bot{settings.NOTIFY_TELEGRAM_BOT_TOKEN}/sendPhoto"
+        ext = {"image/png": "png", "image/webp": "webp"}.get(mime, "jpg")
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            res = await client.post(
+                url,
+                data={"chat_id": settings.NOTIFY_TELEGRAM_CHAT_ID, "caption": caption[:1000]},
+                files={"photo": (f"photo.{ext}", data, mime)},
+            )
+        if not res.is_success:
+            logger.warning("Telegram photo responded with status %s", res.status_code)
+    except Exception as exc:
+        logger.error("Telegram photo failed: %s", type(exc).__name__)

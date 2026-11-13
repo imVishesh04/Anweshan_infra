@@ -10,6 +10,8 @@ import json
 UPLOAD_PATH = "/api/admin/upload"
 UPLOAD_LIMIT = 9 * 1024 * 1024  # 8 MB photo + multipart overhead
 DEFAULT_LIMIT = 64 * 1024  # JSON bodies (enquiry form, admin edits) are tiny
+WEBHOOK_PATH = "/api/whatsapp/webhook"
+WEBHOOK_LIMIT = 512 * 1024  # Meta can batch several messages in one webhook call
 
 
 class _TooLarge(Exception):
@@ -25,8 +27,9 @@ class BodySizeLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        is_upload = scope["path"].rstrip("/") == UPLOAD_PATH
-        limit = UPLOAD_LIMIT if is_upload else DEFAULT_LIMIT
+        path = scope["path"].rstrip("/")
+        is_upload = path == UPLOAD_PATH
+        limit = UPLOAD_LIMIT if is_upload else WEBHOOK_LIMIT if path == WEBHOOK_PATH else DEFAULT_LIMIT
         message = (
             "Photo is too big. Please choose a photo under 8 MB."
             if is_upload

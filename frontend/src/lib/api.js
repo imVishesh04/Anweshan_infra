@@ -89,6 +89,27 @@ export function waLink(number, text) {
   return `https://wa.me/${d}?text=${encodeURIComponent(text)}`;
 }
 
+// Website WhatsApp buttons add a short code like "Ref: AI-KITCHEN" to the pre-typed
+// message, so the WhatsApp bot already knows the service and skips that question.
+export function serviceRef(text = "") {
+  const t = String(text).toLowerCase();
+  if (/kitchen|wardrobe|modular/.test(t)) return "AI-KITCHEN";
+  if (/furniture|repair|polish|sofa|chair|assessment|carpent/.test(t)) return "AI-FURNITURE";
+  if (/shop|retail|office|caf|restaurant|commercial|store|showroom|salon|boutique|bakery/.test(t)) return "AI-SHOP";
+  if (/home|house|flat|apartment|villa|bhk|interior|living|bedroom|nook|lounge/.test(t)) return "AI-HOME";
+  return "AI-OTHER";
+}
+
+const CATEGORY_REF = { homes: "AI-HOME", shops: "AI-SHOP", furniture: "AI-FURNITURE" };
+
+export function categoryRef(category, title = "") {
+  return CATEGORY_REF[category] || serviceRef(title);
+}
+
+export function withRef(text, ref) {
+  return ref ? `${text}\n\nRef: ${ref}` : text;
+}
+
 export function telHref(number) {
   const d = intlDigits(number);
   return d ? `tel:+${d}` : "#contact";

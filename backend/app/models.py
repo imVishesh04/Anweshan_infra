@@ -84,6 +84,7 @@ class Enquiry(BaseDocument):
     phone: str
     service: str = ""
     message: str = ""
+    source: str = "website"  # "website" or "whatsapp"
     read: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 

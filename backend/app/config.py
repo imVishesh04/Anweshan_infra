@@ -50,6 +50,21 @@ class Settings(BaseSettings):
     # When set, the real visitor IP is taken from Netlify's signed headers.
     NETLIFY_PROXY_SECRET: str | None = None
 
+    # WhatsApp Cloud API bot (all four must be set for the bot to run)
+    WA_VERIFY_TOKEN: str | None = None  # any long random text; the same text goes in Meta's webhook setup
+    WA_APP_SECRET: str | None = None  # Meta app > App settings > Basic > App secret
+    WA_ACCESS_TOKEN: str | None = None  # permanent System User token
+    WA_PHONE_NUMBER_ID: str | None = None  # WhatsApp > API setup > Phone number ID
+    WA_GRAPH_VERSION: str = "v25.0"
+    # Number customers can call / WhatsApp to talk to a person (shown at the end of the chat)
+    WA_OWNER_CONTACT: str | None = None
+
+    @property
+    def whatsapp_enabled(self) -> bool:
+        return bool(
+            self.WA_VERIFY_TOKEN and self.WA_APP_SECRET and self.WA_ACCESS_TOKEN and self.WA_PHONE_NUMBER_ID
+        )
+
     @field_validator("JWT_SECRET")
     @classmethod
     def validate_jwt_secret(cls, v: str) -> str:
