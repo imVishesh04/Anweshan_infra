@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Armchair, Home, MessageCircle, Store, Timer } from "lucide-react";
 import { useSite } from "@/lib/SiteContext";
-import { imgUrl, serviceRef, waLink, withRef } from "@/lib/api";
+import { imgUrl, waLink } from "@/lib/api";
 import Reveal, { EASE, Eyebrow } from "../components/Reveal";
 
 const ICONS = { home: Home, shop: Store, armchair: Armchair };
@@ -57,7 +57,7 @@ export default function Services() {
 
           {services.map((service, i) => {
             const Icon = ICONS[service.icon] || Home;
-            const enquireText = withRef(`Hi Anweshan Infra! I am interested in "${service.title}". Please tell me more.`, serviceRef(service.title));
+            const enquireText = `Hi Anweshan Infra! I am interested in "${service.title}". Please tell me more.`;
             return (
               <motion.article
                 key={service.id}

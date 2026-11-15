@@ -5,7 +5,7 @@ import {
   Sofa, UtensilsCrossed, Wrench,
 } from "lucide-react";
 import { useSite } from "@/lib/SiteContext";
-import { waLink, withRef } from "@/lib/api";
+import { waLink } from "@/lib/api";
 import { WhatsAppIcon } from "../components/Logo";
 import Reveal, { EASE, Eyebrow } from "../components/Reveal";
 
@@ -121,7 +121,7 @@ export default function Estimator() {
                     <a
                       href={waLink(
                         site.whatsapp,
-                        withRef(`Hi Anweshan Infra! I used your Furniture Assessment tool.\nItem: ${typeLabel}\nNeed: ${needLabel}\nPlease guide me.`, "AI-FURNITURE")
+                        `Hi Anweshan Infra! I used your Furniture Assessment tool.\nItem: ${typeLabel}\nNeed: ${needLabel}\nPlease guide me.`
                       )}
                       target="_blank"
                       rel="noreferrer"
